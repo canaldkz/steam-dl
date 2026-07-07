@@ -153,6 +153,17 @@ def ingest(path: Path, *, name: Optional[str] = None) -> Ingested:
         raise ValidationError(f"bundle not found: {path}")
 
     tmp: Optional[tempfile.TemporaryDirectory] = None
+    if path.is_file() and path.suffix.lower() == ".lua":
+        # A lone lua upload: use it directly, siblings (if any) as manifests.
+        spec = spec_from_lua(path, name=name, manifest_dir=path.parent)
+        log.info("bundle: using lua %s", path.name)
+        log.info(
+            "bundle: appid=%s depots=%d (keys=%d)",
+            spec.appid,
+            len(spec.depots),
+            sum(1 for d in spec.depots if d.key),
+        )
+        return Ingested(spec=spec, manifest_dir=path.parent, _tmp=None)
     if path.is_file() and path.suffix.lower() == ".zip":
         tmp = tempfile.TemporaryDirectory(prefix="steam-dl-bundle-")
         root = Path(tmp.name)
@@ -162,7 +173,7 @@ def ingest(path: Path, *, name: Optional[str] = None) -> Ingested:
     elif path.is_dir():
         root = path
     else:
-        raise ValidationError(f"bundle must be a directory or .zip: {path}")
+        raise ValidationError(f"bundle must be a .lua, .zip or directory: {path}")
 
     lua = _find_lua(root)
     manifest_dir = lua.parent
