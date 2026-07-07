@@ -138,6 +138,17 @@
     <details>
       <summary>Параметры</summary>
       <div class="row">
+        <div><label>Лаунчер</label>
+          <select id="launcher">
+            <option value="steam">steam (Game Mode)</option>
+            <option value="lutris">lutris (без Steam)</option>
+            <option value="portproton">portproton (без Steam)</option>
+            <option value="script">script/umu (без Steam)</option>
+            <option value="none">не регистрировать</option>
+          </select></div>
+        <div><label>Имя игрока (Goldberg)</label><input id="account" type="text" placeholder="Player"></div>
+      </div>
+      <div class="row">
         <div><label>Бэкенд</label>
           <select id="backend">
             <option value="portproton">portproton</option>
@@ -283,6 +294,8 @@ async function install(dry){
     prefix: $('prefix').value.trim(),
     proton: $('proton').value.trim(),
     goldberg_dir: $('goldberg').value.trim(),
+    launcher: $('launcher').value,
+    account_name: $('account').value.trim(),
     no_steam: $('noSteam').checked,
     no_drm: $('noDrm').checked,
   };
@@ -314,7 +327,7 @@ async function pollJob(id,since){
   if(s.done){
     if(s.error) banner('Ошибка: '+s.error,'err');
     else{ const R=s.result||{};
-      banner('Готово ✓  '+(R.game_dir||'')+(R.shortcut_appid?('  · shortcut '+R.shortcut_appid):''),'ok'); }
+      banner('Готово ✓  '+(R.game_dir||'')+(R.launcher_note?('  · '+R.launcher_note.replace(/\n/g,' ')):''),'ok'); }
     return;
   }
   pollTimer = setTimeout(()=>pollJob(id, s.next), 700);

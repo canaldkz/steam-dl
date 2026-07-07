@@ -31,7 +31,15 @@ def _add_common(p: argparse.ArgumentParser) -> None:
     p.add_argument("--proton", dest="proton_tool", help="compat tool name (default GE-Proton)")
     p.add_argument("--user-id", help="Steam userdata id override")
     p.add_argument("--no-drm-patch", action="store_true", help="skip Goldberg patching")
-    p.add_argument("--no-steam", action="store_true", help="skip native Steam integration")
+    p.add_argument(
+        "--launcher",
+        choices=["steam", "lutris", "portproton", "script", "none"],
+        help="how to register the game (default steam; lutris/portproton/script = no Steam)",
+    )
+    p.add_argument("--no-steam", action="store_true", help="alias for --launcher none")
+    p.add_argument("--account-name", help="Goldberg emulated player name")
+    p.add_argument("--no-emulate-settings", action="store_true",
+                   help="do not write Goldberg steam_settings/")
     p.add_argument("--restart-steam", action="store_true", help="restart Steam at the end")
     p.add_argument("-n", "--dry-run", action="store_true", help="log actions without doing them")
     p.add_argument("-v", "--verbose", action="store_true")
@@ -46,11 +54,15 @@ def _cfg_from_args(args: argparse.Namespace) -> Config:
         goldberg_dir=getattr(args, "goldberg_dir", None),
         proton_tool=getattr(args, "proton_tool", None),
         user_id=getattr(args, "user_id", None),
+        launcher=getattr(args, "launcher", None),
+        account_name=getattr(args, "account_name", None),
     )
     if getattr(args, "no_drm_patch", False):
         cfg = cfg.merged(patch_drm=False)
+    if getattr(args, "no_emulate_settings", False):
+        cfg = cfg.merged(emulate_settings=False)
     if getattr(args, "no_steam", False):
-        cfg = cfg.merged(add_to_steam=False)
+        cfg = cfg.merged(launcher="none")
     if getattr(args, "restart_steam", False):
         cfg = cfg.merged(restart_steam=True)
     if getattr(args, "dry_run", False):
@@ -144,9 +156,11 @@ def cmd_install(args: argparse.Namespace) -> int:
     print()
     print(f"game dir     : {result.game_dir}")
     print(f"executable   : {result.exe_path}")
-    if result.shortcut_appid is not None:
-        print(f"shortcut id  : {result.shortcut_appid}")
     print(f"patched dlls : {len(result.patched_dlls)}")
+    if result.launch is not None:
+        print(f"launcher     : {result.launch.kind}")
+        if result.launch.note:
+            print(f"  {result.launch.note}")
     return 0
 
 

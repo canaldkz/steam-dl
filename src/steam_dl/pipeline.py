@@ -15,9 +15,10 @@ from typing import List, Optional
 from .backends import make_backend
 from .config import Config
 from .errors import ValidationError
+from .goldberg_config import SteamSettings
+from .launchers import LaunchResult, make_launcher
 from .logutil import get_logger
 from .models import GameSpec
-from .stages.integrate import integrate
 from .stages.relocate import apply_goldberg, relocate
 
 log = get_logger()
@@ -27,7 +28,7 @@ log = get_logger()
 class Result:
     game_dir: Path
     exe_path: Path
-    shortcut_appid: Optional[int]
+    launch: Optional[LaunchResult]
     patched_dlls: List[Path]
 
 
@@ -82,10 +83,13 @@ def run(spec: GameSpec, cfg: Config, manifest_source: Optional[Path] = None) -> 
     else:
         game_dir = relocate(game_src, dest, dry_run=cfg.dry_run)
 
-    # Stage 4b -- Goldberg DRM bypass.
+    # Stage 4b -- Goldberg DRM bypass + steam_settings/.
     patched: List[Path] = []
     if cfg.patch_drm:
-        patched = apply_goldberg(game_dir, spec.appid, cfg.goldberg_dir, dry_run=cfg.dry_run)
+        settings = _steam_settings(cfg) if cfg.emulate_settings else None
+        patched = apply_goldberg(
+            game_dir, spec.appid, cfg.goldberg_dir, settings=settings, dry_run=cfg.dry_run
+        )
     else:
         log.info("stage4: DRM patch disabled")
 
@@ -94,17 +98,30 @@ def run(spec: GameSpec, cfg: Config, manifest_source: Optional[Path] = None) -> 
         game_dir / (spec.executable or "game.exe")
     )
 
-    # Stage 5 -- native Steam integration.
-    shortcut_appid: Optional[int] = None
-    if cfg.add_to_steam:
-        shortcut_appid = integrate(cfg, spec.name, exe_path, spec.launch_options)
+    # Stage 5 -- register the game with a launcher.
+    launch: Optional[LaunchResult] = None
+    if cfg.launcher and cfg.launcher != "none":
+        launcher = make_launcher(cfg)
+        log.info("stage5: registering via launcher '%s'", cfg.launcher)
+        launch = launcher.register(spec.name, exe_path, game_dir)
+        if launch.note:
+            log.info("stage5: %s", launch.note.replace("\n", " | "))
     else:
-        log.info("stage5: skipping native Steam integration (--no-steam)")
+        log.info("stage5: launcher disabled")
 
     log.info("=== done: %s ===", spec.name)
     return Result(
         game_dir=game_dir,
         exe_path=exe_path,
-        shortcut_appid=shortcut_appid,
+        launch=launch,
         patched_dlls=patched,
+    )
+
+
+def _steam_settings(cfg: Config) -> SteamSettings:
+    return SteamSettings(
+        account_name=cfg.account_name,
+        listen_port=cfg.listen_port,
+        offline=cfg.offline,
+        disable_networking=cfg.disable_networking,
     )

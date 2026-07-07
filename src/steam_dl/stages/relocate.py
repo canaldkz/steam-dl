@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import List, Optional
 
 from ..errors import ValidationError
+from ..goldberg_config import SteamSettings, write_steam_settings
 from ..logutil import get_logger
 
 log = get_logger()
@@ -59,13 +60,15 @@ def apply_goldberg(
     appid: int,
     goldberg_dir: Optional[Path],
     *,
+    settings: Optional[SteamSettings] = None,
     dry_run: bool = False,
 ) -> List[Path]:
     """Overwrite steam_api DLLs with Goldberg and write ``steam_appid.txt``.
 
     Every directory that contained an original DLL gets a ``steam_appid.txt``
     even when no Goldberg template is configured, since some games need only
-    that file. Returns the list of patched DLL paths.
+    that file. When ``settings`` is given, a ``steam_settings/`` folder is also
+    written next to each DLL. Returns the list of patched DLL paths.
     """
     dlls = find_steam_api_dlls(game_dir)
     if not dlls:
@@ -97,4 +100,7 @@ def apply_goldberg(
                 shutil.copy2(dll, backup)
             shutil.copy2(template, dll)
         patched.append(dll)
+
+    if settings is not None and seen_dirs:
+        write_steam_settings(sorted(seen_dirs), appid, settings, dry_run=dry_run)
     return patched

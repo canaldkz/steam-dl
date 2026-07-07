@@ -42,6 +42,9 @@ steam-dl install --bundle ~/mygame.zip --goldberg-dir ~/Goldberg
 
 # dry run: print the actions without changing anything
 steam-dl install --bundle ~/mygame.zip --dry-run -v
+
+# register without native Steam (Lutris / PortProton / umu script)
+steam-dl install --bundle ~/mygame.zip --launcher lutris --account-name Player
 ```
 
 A game can be specified three ways: `--bundle` (ready-made files, simplest),
@@ -58,11 +61,27 @@ A five-stage pipeline; each stage validates its result before the next runs:
 2. **Download** — launch Windows Steam through PortProton (`steam://install`).
 3. **Watch** — poll `appmanifest_<AppID>.acf` until the download completes.
 4. **Relocate + DRM** — move the game to `~/Games`, replace `steam_api*.dll`
-   with Goldberg, and write `steam_appid.txt`.
-5. **Integrate** — add a `shortcuts.vdf` entry and map Proton in `config.vdf`
-   so the game launches in Game Mode.
+   with Goldberg, and write `steam_appid.txt` plus a `steam_settings/` folder.
+5. **Register** — add the game to a launcher.
 
-A Wine-free path also exists: when depot keys are known, the
+### Launchers
+
+`--launcher` selects how the game is registered:
+
+- `steam` (default) — `shortcuts.vdf` + Proton mapping in `config.vdf` for Game
+  Mode.
+- `lutris` — a Lutris game entry (config YAML + `pga.db` row).
+- `portproton` — a launch script/desktop entry running the exe via PortProton.
+- `script` — a launch script/desktop entry running the exe under Proton via
+  `umu-run`.
+- `none` — skip registration.
+
+The Steam-less launchers require no Steam client, account, or online presence:
+the Goldberg emulator answers the Steamworks API entirely offline. Its
+`steam_settings/` (player name, port, offline flag) is generated in stage 4 and
+can enable LAN/VPN multiplayer between other Goldberg players.
+
+A Wine-free download path also exists: when depot keys are known, the
 `--backend depotdownloader` backend pulls the game straight from the Steam CDN,
 skipping PortProton and SteamTools.
 

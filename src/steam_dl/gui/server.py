@@ -145,12 +145,17 @@ def _config_from_payload(base: Config, payload: dict) -> Config:
     }
     if payload.get("goldberg_dir"):
         over["goldberg_dir"] = Path(payload["goldberg_dir"]).expanduser()
+    if payload.get("launcher"):
+        over["launcher"] = payload["launcher"]
+    if payload.get("account_name"):
+        over["account_name"] = payload["account_name"]
     cfg = base.merged(**over)
     cfg = cfg.merged(
         dry_run=bool(payload.get("dry_run")),
-        add_to_steam=not payload.get("no_steam"),
         patch_drm=not payload.get("no_drm"),
     )
+    if payload.get("no_steam"):
+        cfg = cfg.merged(launcher="none")
     return cfg
 
 
@@ -164,7 +169,8 @@ def _run_install(job: Job, base_cfg: Config, payload: dict) -> None:
         job.result = {
             "game_dir": str(result.game_dir),
             "exe_path": str(result.exe_path),
-            "shortcut_appid": result.shortcut_appid,
+            "launcher": result.launch.kind if result.launch else None,
+            "launcher_note": result.launch.note if result.launch else "",
             "patched_dlls": len(result.patched_dlls),
         }
     except Exception as exc:  # surface any failure to the UI

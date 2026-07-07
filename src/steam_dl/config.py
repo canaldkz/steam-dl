@@ -34,10 +34,17 @@ class Config:
     # --- destination -------------------------------------------------------
     games_dir: Path = field(default_factory=lambda: HOME / "Games")
 
-    # --- native steam integration -----------------------------------------
+    # --- launcher / integration -------------------------------------------
     proton_tool: str = "GE-Proton"
-    add_to_steam: bool = True
+    launcher: str = "steam"              # steam | lutris | portproton | script | none
     restart_steam: bool = False          # off by default: it is disruptive
+
+    # --- Goldberg emulator settings (steam_settings/) ----------------------
+    emulate_settings: bool = True        # write steam_settings/ next to the DLL
+    account_name: str = "Player"
+    listen_port: int = 47584
+    offline: bool = True
+    disable_networking: bool = False     # True = single-player only, no LAN
 
     # --- watcher tuning ----------------------------------------------------
     acf_appear_timeout: int = 120        # s to wait for appmanifest to exist
