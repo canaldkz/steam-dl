@@ -71,6 +71,14 @@ def search(query: str, *, limit: int = 15, refresh: bool = False) -> List[AppMat
     return subs[:limit]
 
 
+def name_for_appid(appid: int, *, refresh: bool = False) -> Optional[str]:
+    """Reverse lookup: AppID -> display name, best-effort from the cache."""
+    for name, aid in _table(refresh=refresh).items():
+        if aid == appid:
+            return name
+    return None
+
+
 def resolve(query: str, *, refresh: bool = False) -> Optional[AppMatch]:
     """Return a single unambiguous match, or ``None`` if 0/many candidates."""
     if query.strip().isdigit():
