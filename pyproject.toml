@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "steam-dl"
+version = "0.1.0"
+description = "Automate SteamTools/PortProton game install and native Steam Game Mode setup on Linux handhelds"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "canaldkz" }]
+keywords = ["steam", "steamtools", "portproton", "bazzite", "proton", "goldberg"]
+
+# Core has zero third-party dependencies: the VDF codecs and the Steam app-list
+# client are implemented on the standard library so it runs on a stock image.
+dependencies = []
+
+[project.optional-dependencies]
+yaml = ["PyYAML>=5.4"]
+dev = ["pytest>=7"]
+
+[project.scripts]
+steam-dl = "steam_dl.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

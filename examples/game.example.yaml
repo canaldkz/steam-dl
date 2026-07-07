@@ -1,0 +1,21 @@
+# Example game spec. Feed to: steam-dl install --spec examples/game.example.yaml
+#
+# appid       Steam application id of the game.
+# name        Display name; also the default folder name under ~/Games.
+# install_dir Optional override for the steamapps/common folder name.
+# executable  Path to the launch .exe, relative to the game folder. If omitted,
+#             steam-dl picks the largest non-redistributable .exe it can find.
+# depots      One entry per depot. `key` is the hex decryption key (needed by
+#             the DepotDownloader backend and by the SteamTools lua). `manifest_id`
+#             pins a specific manifest generation and is optional.
+appid: 220
+name: Half-Life 2
+install_dir: Half-Life 2
+executable: hl2.exe
+launch_options: ""
+depots:
+  - depot_id: 221
+    key: "0000000000000000000000000000000000000000000000000000000000000000"
+    manifest_id: "1234567890123456789"
+  - depot_id: 222
+    key: "1111111111111111111111111111111111111111111111111111111111111111"
