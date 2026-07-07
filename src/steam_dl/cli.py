@@ -117,8 +117,30 @@ def _build_spec(args: argparse.Namespace) -> GameSpec:
 
 def cmd_install(args: argparse.Namespace) -> int:
     cfg = _cfg_from_args(args)
-    spec = _build_spec(args)
-    result = pipeline.run(spec, cfg, manifest_source=args.manifest_source)
+    ingested = None
+    if args.bundle:
+        from . import bundle
+
+        ingested = bundle.ingest(args.bundle, name=args.name)
+        spec = ingested.spec
+        if args.exe:
+            spec.executable = args.exe
+        if args.install_dir:
+            spec.install_dir = args.install_dir
+        if args.launch_options:
+            spec.launch_options = args.launch_options
+        manifest_source = args.manifest_source or ingested.manifest_dir
+    else:
+        if not args.spec and not args.target:
+            raise SteamDlError("provide a target AppID/name, --spec, or --bundle")
+        spec = _build_spec(args)
+        manifest_source = args.manifest_source
+
+    try:
+        result = pipeline.run(spec, cfg, manifest_source=manifest_source)
+    finally:
+        if ingested is not None:
+            ingested.cleanup()
     print()
     print(f"game dir     : {result.game_dir}")
     print(f"executable   : {result.exe_path}")
@@ -143,6 +165,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     pi = sub.add_parser("install", help="install a game end-to-end")
     pi.add_argument("target", nargs="?", help="AppID or game name")
+    pi.add_argument(
+        "--bundle",
+        type=Path,
+        help="ready-made SteamTools bundle (folder or .zip) with lua + manifests",
+    )
     pi.add_argument("--spec", type=Path, help="JSON/YAML spec with depots and keys")
     pi.add_argument("--name", help="override display name")
     pi.add_argument("--exe", help="relative path to the launch executable")

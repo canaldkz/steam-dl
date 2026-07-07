@@ -38,12 +38,27 @@ steam-dl search "Half-Life 2"
 # «прогон» без изменений — покажет все действия
 steam-dl install 220 --dry-run -v
 
+# из готового SteamTools-бандла (папка или .zip с lua + манифестами) --
+# appid, депоты и ключи вытаскиваются из lua автоматически, спек не нужен
+steam-dl install --bundle ~/mygame.zip --goldberg-dir ~/Goldberg
+
 # полный цикл по спеку с депотами и ключами
 steam-dl install --spec examples/game.example.yaml \
     --goldberg-dir ~/Goldberg --prefix STEAM
 ```
 
+Три способа задать игру: `--bundle` (готовый набор файлов, самый простой),
+`--spec` (YAML/JSON), либо `target` + `--depot` прямо в командной строке.
 Формат спека — в `examples/game.example.yaml`.
+
+### Бандлы
+
+Бандл — это то, что у тебя уже лежит для игры: `app_<AppID>.lua` плюс её
+`.manifest`-файлы. `--bundle` принимает папку или `.zip`, сам находит lua,
+разбирает `addappid(...)` / `setManifestid(...)` (а недостающие manifest id
+достаёт из имён файлов `<depot>_<gid>.manifest`) и раскладывает всё в префикс.
+Инструмент ничего не скачивает — он лишь распаковывает и разбирает уже
+имеющиеся у тебя файлы.
 
 ## Архитектура
 
