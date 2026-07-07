@@ -1,3 +1,6 @@
+HEAVILY VIBECODED, USE AT YOUR OWN RISK
+
+
 # steam-dl
 
 Installs Steam games via **SteamTools/PortProton** and registers them for the
