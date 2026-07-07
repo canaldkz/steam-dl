@@ -51,6 +51,15 @@ def test_ingest_folder(tmp_path: Path):
     assert res.manifest_dir == tmp_path
 
 
+def test_ingest_lone_lua(tmp_path: Path):
+    lua = tmp_path / "app_220.lua"
+    lua.write_text(_LUA)
+    res = ingest(lua, name="HL2")
+    assert res.spec.appid == 220
+    assert {d.depot_id for d in res.spec.depots} == {221, 222}
+    assert res.manifest_dir == tmp_path
+
+
 def test_ingest_zip(tmp_path: Path):
     zip_path = tmp_path / "hl2.zip"
     with zipfile.ZipFile(zip_path, "w") as zf:

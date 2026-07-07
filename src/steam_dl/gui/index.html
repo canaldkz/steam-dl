@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>steam-dl</title>
+<style>
+  :root{
+    --bg:#0e1116; --panel:#171c24; --panel2:#1f2631; --line:#2b3340;
+    --fg:#e6edf3; --muted:#8b97a7; --accent:#4f9cff; --accent2:#2f6fd0;
+    --ok:#3fb950; --warn:#d29922; --err:#f85149; --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--fg);
+    font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  .wrap{max-width:900px;margin:0 auto;padding:16px 16px 64px}
+  h1{font-size:22px;margin:8px 0 4px;display:flex;align-items:center;gap:10px}
+  h1 .tag{font-size:12px;color:var(--muted);font-weight:400}
+  h2{font-size:15px;text-transform:uppercase;letter-spacing:.06em;
+    color:var(--muted);margin:22px 0 10px}
+  .panel{background:var(--panel);border:1px solid var(--line);
+    border-radius:var(--radius);padding:16px;margin-bottom:14px}
+  label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
+  input,select,button,textarea{font:inherit;color:var(--fg)}
+  input[type=text],input[type=number],select,textarea{
+    width:100%;background:var(--panel2);border:1px solid var(--line);
+    border-radius:10px;padding:12px 14px;min-height:48px}
+  textarea{min-height:auto;resize:vertical}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .row>*{flex:1;min-width:120px}
+  button{background:var(--accent2);border:1px solid var(--accent);
+    border-radius:10px;padding:12px 18px;min-height:48px;cursor:pointer;
+    font-weight:600}
+  button:active{transform:translateY(1px)}
+  button.ghost{background:transparent;border-color:var(--line);color:var(--fg)}
+  button.big{width:100%;font-size:17px;min-height:56px}
+  button.ok{background:#1a7f37;border-color:var(--ok)}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}
+  .chip{font-size:13px;padding:6px 10px;border-radius:999px;
+    background:var(--panel2);border:1px solid var(--line)}
+  .chip.ok{border-color:var(--ok);color:#7ee787}
+  .chip.bad{border-color:var(--err);color:#ffa198}
+  .res{display:flex;align-items:center;gap:10px;padding:10px 12px;
+    border:1px solid var(--line);border-radius:10px;margin-bottom:8px;
+    background:var(--panel2)}
+  .res .name{flex:1;font-weight:600}
+  .res .id{color:var(--muted);font-variant-numeric:tabular-nums}
+  .switch{display:flex;gap:8px;margin:6px 0}
+  .switch button{flex:1;background:var(--panel2);border-color:var(--line);color:var(--fg)}
+  .switch button.sel{background:var(--accent2);border-color:var(--accent);color:#fff}
+  .check{display:flex;align-items:center;gap:10px;margin:10px 0}
+  .check input{width:24px;height:24px;flex:none}
+  .check label{margin:0;color:var(--fg);font-size:15px}
+  pre#log{background:#0a0d12;border:1px solid var(--line);border-radius:10px;
+    padding:12px;max-height:320px;overflow:auto;font-size:13px;
+    white-space:pre-wrap;word-break:break-word}
+  .muted{color:var(--muted);font-size:13px}
+  .depot{display:flex;gap:8px;margin-bottom:8px}
+  .depot input{flex:1}
+  .depot button{flex:none;min-width:48px;background:transparent;border-color:var(--line)}
+  details summary{cursor:pointer;color:var(--muted);padding:6px 0}
+  .hidden{display:none}
+  .result{border-color:var(--ok)}
+  .banner{padding:10px 12px;border-radius:10px;margin-bottom:10px;font-size:14px}
+  .banner.err{background:#3d1418;border:1px solid var(--err);color:#ffa198}
+  .banner.ok{background:#0f2e17;border:1px solid var(--ok);color:#7ee787}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🎮 steam-dl <span class="tag">GUI</span></h1>
+
+  <!-- ENV -->
+  <div class="panel">
+    <div class="chips" id="envChips"><span class="chip">загрузка окружения…</span></div>
+    <div style="margin-top:10px"><button class="ghost" onclick="loadEnv()">Обновить статус</button></div>
+  </div>
+
+  <!-- SEARCH -->
+  <h2>Поиск игры</h2>
+  <div class="panel">
+    <div class="row">
+      <input id="q" type="text" placeholder="название или AppID" inputmode="search"
+             onkeydown="if(event.key==='Enter')doSearch()">
+      <button style="flex:none" onclick="doSearch()">Найти</button>
+    </div>
+    <div id="results" style="margin-top:12px"></div>
+  </div>
+
+  <!-- INSTALL -->
+  <h2>Установка</h2>
+  <div class="panel">
+    <div class="row">
+      <div><label>AppID</label><input id="appid" type="number" placeholder="220"></div>
+      <div style="flex:2"><label>Название</label><input id="name" type="text" placeholder="Half-Life 2"></div>
+    </div>
+
+    <div style="margin-top:6px">
+      <button class="ghost" style="width:100%" onclick="openStore()">🛍️ Открыть страницу в Steam Store</button>
+    </div>
+
+    <label>Источник файлов игры</label>
+    <div class="switch">
+      <button id="mBundle" class="sel" onclick="setMode('bundle')">Бандл (zip / lua)</button>
+      <button id="mManual" onclick="setMode('manual')">Депоты вручную</button>
+    </div>
+
+    <!-- bundle mode -->
+    <div id="bundleBox">
+      <label>Файл бандла (папка недоступна из браузера — загрузите .zip или .lua)</label>
+      <input id="file" type="file" accept=".zip,.lua" onchange="uploadFile()">
+      <div id="uploadInfo" class="muted"></div>
+      <details>
+        <summary>Где взять lua/manifest?</summary>
+        <div class="muted" style="margin:6px 0">
+          Инструмент их не скачивает. Укажите свой источник в «Настройках» и
+          нажмите кнопку ниже, затем загрузите полученный .zip/.lua сюда.
+        </div>
+        <button class="ghost" style="width:100%" onclick="openSource()">🔗 Открыть свой источник</button>
+      </details>
+    </div>
+
+    <!-- manual mode -->
+    <div id="manualBox" class="hidden">
+      <label>Исполняемый файл (необязательно)</label>
+      <input id="exe" type="text" placeholder="game.exe">
+      <label>Депоты — ID, ключ (hex), manifest id</label>
+      <div id="depots"></div>
+      <button class="ghost" onclick="addDepot()">+ депот</button>
+    </div>
+
+    <div class="check">
+      <input id="dry" type="checkbox" checked>
+      <label for="dry">Сухой прогон (ничего не менять, только показать действия)</label>
+    </div>
+
+    <details>
+      <summary>Параметры</summary>
+      <div class="row">
+        <div><label>Бэкенд</label>
+          <select id="backend">
+            <option value="portproton">portproton</option>
+            <option value="depotdownloader">depotdownloader</option>
+          </select></div>
+        <div><label>Префикс</label><input id="prefix" type="text" placeholder="STEAM"></div>
+      </div>
+      <div class="row">
+        <div><label>Proton</label><input id="proton" type="text" placeholder="GE-Proton"></div>
+        <div><label>Каталог Goldberg</label><input id="goldberg" type="text" placeholder="~/Goldberg"></div>
+      </div>
+      <div class="check"><input id="noSteam" type="checkbox"><label for="noSteam">Не добавлять в нативный Steam</label></div>
+      <div class="check"><input id="noDrm" type="checkbox"><label for="noDrm">Не патчить DRM (Goldberg)</label></div>
+    </details>
+
+    <div class="row" style="margin-top:14px">
+      <button class="big" onclick="install(true)">🧪 Сухой прогон</button>
+      <button class="big ok" onclick="install(false)">⬇️ Установить</button>
+    </div>
+  </div>
+
+  <!-- LOG -->
+  <div class="panel" id="logPanel" style="display:none">
+    <div id="banner"></div>
+    <pre id="log"></pre>
+  </div>
+
+  <!-- SETTINGS -->
+  <details class="panel">
+    <summary>⚙️ Настройки</summary>
+    <label>Свой источник lua/manifest (URL). Можно с <code>{appid}</code>.</label>
+    <input id="sourceUrl" type="text" placeholder="https://example.org/game/{appid}">
+    <div class="muted" style="margin-top:6px">
+      Хранится локально в браузере. Инструмент по нему ничего не качает — только открывает вкладку.
+    </div>
+    <button class="ghost" style="margin-top:10px" onclick="saveSettings()">Сохранить</button>
+  </details>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let mode = 'bundle', bundlePath = null, pollTimer = null;
+
+// ---- settings persistence ----
+const SETTINGS = ['prefix','proton','goldberg','backend','sourceUrl'];
+function loadSettings(){
+  SETTINGS.forEach(k=>{ const v=localStorage.getItem('sdl_'+k); if(v!=null) $(k).value=v; });
+}
+function saveSettings(){
+  SETTINGS.forEach(k=> localStorage.setItem('sdl_'+k, $(k).value));
+  toast('Настройки сохранены');
+}
+function toast(m){ banner(m,'ok'); }
+function banner(msg,cls){ $('logPanel').style.display='block';
+  $('banner').className='banner '+(cls||''); $('banner').textContent=msg; }
+
+// ---- env ----
+async function loadEnv(){
+  try{
+    const e = await (await fetch('/api/env')).json();
+    const chip=(t,ok)=>`<span class="chip ${ok?'ok':'bad'}">${t}</span>`;
+    $('envChips').innerHTML =
+      chip('Steam '+(e.steam_root?'✓':'✗'), !!e.steam_root)+
+      chip('user '+(e.user_id||'—'), !!e.user_id)+
+      chip('префикс '+(e.prefix_exists?'✓':'✗'), e.prefix_exists)+
+      chip('SteamTools '+(e.steamtools_exists?'✓':'✗'), e.steamtools_exists)+
+      `<span class="chip">Games: ${e.games_dir}</span>`;
+    if(!$('prefix').value) $('prefix').value = e.prefix_name||'';
+    if(!$('proton').value) $('proton').value = e.proton_tool||'';
+    if(!$('goldberg').value && e.goldberg_dir) $('goldberg').value = e.goldberg_dir;
+    if(!$('backend').value) $('backend').value = e.backend||'portproton';
+  }catch(err){ $('envChips').innerHTML='<span class="chip bad">ошибка: '+err+'</span>'; }
+}
+
+// ---- search ----
+async function doSearch(){
+  const q = $('q').value.trim(); if(!q) return;
+  $('results').innerHTML = '<div class="muted">поиск…</div>';
+  try{
+    const r = await (await fetch('/api/search?q='+encodeURIComponent(q))).json();
+    if(r.error){ $('results').innerHTML='<div class="banner err">'+r.error+'</div>'; return; }
+    if(!r.length){ $('results').innerHTML='<div class="muted">ничего не найдено</div>'; return; }
+    $('results').innerHTML = r.map(m=>`
+      <div class="res">
+        <span class="id">${m.appid}</span>
+        <span class="name">${escapeHtml(m.name)}</span>
+        <button onclick="pick(${m.appid}, ${JSON.stringify(m.name).replace(/"/g,'&quot;')})">Выбрать</button>
+      </div>`).join('');
+  }catch(err){ $('results').innerHTML='<div class="banner err">'+err+'</div>'; }
+}
+function pick(appid,name){ $('appid').value=appid; $('name').value=name;
+  window.scrollTo({top:$('appid').getBoundingClientRect().top+window.scrollY-80,behavior:'smooth'}); }
+
+// ---- store / custom source ----
+function openStore(){ const id=$('appid').value.trim();
+  if(!id) return banner('Сначала укажите AppID','err');
+  window.open('https://store.steampowered.com/app/'+id,'_blank'); }
+function openSource(){ const tmpl=$('sourceUrl').value.trim();
+  if(!tmpl) return banner('Задайте URL источника в Настройках','err');
+  window.open(tmpl.replace('{appid}', $('appid').value.trim()),'_blank'); }
+
+// ---- mode ----
+function setMode(m){ mode=m;
+  $('mBundle').classList.toggle('sel',m==='bundle');
+  $('mManual').classList.toggle('sel',m==='manual');
+  $('bundleBox').classList.toggle('hidden',m!=='bundle');
+  $('manualBox').classList.toggle('hidden',m!=='manual'); }
+
+// ---- upload ----
+async function uploadFile(){
+  const f = $('file').files[0]; if(!f) return;
+  $('uploadInfo').textContent = 'загрузка '+f.name+'…';
+  const buf = await f.arrayBuffer();
+  const r = await (await fetch('/api/upload',{method:'POST',
+    headers:{'X-Filename':f.name},body:buf})).json();
+  if(r.error){ $('uploadInfo').textContent='ошибка: '+r.error; return; }
+  bundlePath = r.path; $('uploadInfo').textContent = '✓ '+r.name;
+}
+
+// ---- manual depots ----
+function addDepot(id='',key='',man=''){
+  const div=document.createElement('div'); div.className='depot';
+  div.innerHTML=`<input placeholder="depot id" value="${id}">
+    <input placeholder="ключ (hex)" value="${key}">
+    <input placeholder="manifest id" value="${man}">
+    <button onclick="this.parentNode.remove()">✕</button>`;
+  $('depots').appendChild(div);
+}
+function collectDepots(){
+  return [...$('depots').querySelectorAll('.depot')].map(d=>{
+    const [i,k,m]=d.querySelectorAll('input');
+    return {id:i.value.trim(),key:k.value.trim(),manifest:m.value.trim()};
+  }).filter(d=>d.id);
+}
+
+// ---- install ----
+async function install(dry){
+  const payload = {
+    dry_run: dry || $('dry').checked,
+    appid: $('appid').value.trim(),
+    name: $('name').value.trim(),
+    backend: $('backend').value,
+    prefix: $('prefix').value.trim(),
+    proton: $('proton').value.trim(),
+    goldberg_dir: $('goldberg').value.trim(),
+    no_steam: $('noSteam').checked,
+    no_drm: $('noDrm').checked,
+  };
+  if(mode==='bundle'){
+    if(!bundlePath) return banner('Загрузите файл бандла','err');
+    payload.bundle_path = bundlePath;
+    payload.exe = '';
+  }else{
+    if(!payload.appid) return banner('Укажите AppID','err');
+    payload.exe = $('exe').value.trim();
+    payload.depots = collectDepots();
+  }
+  banner(dry?'Сухой прогон…':'Установка…','');
+  $('log').textContent=''; $('logPanel').style.display='block';
+  try{
+    const r = await (await fetch('/api/install',{method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})).json();
+    if(r.error){ banner(r.error,'err'); return; }
+    pollJob(r.job_id, 0);
+  }catch(err){ banner(''+err,'err'); }
+}
+async function pollJob(id,since){
+  clearTimeout(pollTimer);
+  const s = await (await fetch('/api/job?id='+id+'&since='+since)).json();
+  if(s.lines && s.lines.length){
+    $('log').textContent += s.lines.join('\n')+'\n';
+    $('log').scrollTop = $('log').scrollHeight;
+  }
+  if(s.done){
+    if(s.error) banner('Ошибка: '+s.error,'err');
+    else{ const R=s.result||{};
+      banner('Готово ✓  '+(R.game_dir||'')+(R.shortcut_appid?('  · shortcut '+R.shortcut_appid):''),'ok'); }
+    return;
+  }
+  pollTimer = setTimeout(()=>pollJob(id, s.next), 700);
+}
+
+function escapeHtml(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+// init
+loadSettings(); loadEnv(); addDepot();
+</script>
+</body>
+</html>

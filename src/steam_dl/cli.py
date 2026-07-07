@@ -150,6 +150,18 @@ def cmd_install(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_gui(args: argparse.Namespace) -> int:
+    from .gui import serve
+
+    serve(
+        host=args.host,
+        port=args.port,
+        config=args.config,
+        open_browser=not args.no_browser,
+    )
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="steam-dl", description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -187,6 +199,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_common(pi)
     pi.set_defaults(func=cmd_install)
+
+    pg = sub.add_parser("gui", help="launch the touch-friendly web GUI")
+    pg.add_argument("--host", default="127.0.0.1", help="bind address (0.0.0.0 for LAN/phone)")
+    pg.add_argument("--port", type=int, default=8756)
+    pg.add_argument("--no-browser", action="store_true", help="do not auto-open a browser")
+    pg.add_argument("-c", "--config", type=Path, help="JSON/YAML config file")
+    pg.set_defaults(func=cmd_gui)
     return parser
 
 
