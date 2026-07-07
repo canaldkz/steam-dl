@@ -1,73 +1,74 @@
 # steam-dl
 
-Установка игр через **SteamTools/PortProton** и запуск их в **нативном Steam
-Game Mode** на Linux-портативках (Bazzite/SteamOS) — одной командой или через
-GUI. Инструмент сам качает игру, переносит её, обходит DRM (Goldberg) и
-добавляет ярлык с Proton в игровой режим.
+Installs Steam games via **SteamTools/PortProton** and registers them for the
+**native Steam Game Mode** on Linux handhelds (Bazzite/SteamOS). Handles the
+download, relocation, DRM bypass (Goldberg), and Proton shortcut setup in a
+single command or through a GUI.
 
-Ядро без сторонних зависимостей — работает на голом образе портативки.
+The core has no third-party dependencies and runs on a stock handheld image.
 
-> Первичная настройка чистой портативки — в [INSTALL.md](INSTALL.md).
+> First-time setup of a fresh handheld: see [INSTALL.md](INSTALL.md).
 
-## Установка
+## Installation
 
 ```bash
 git clone https://github.com/canaldkz/steam-dl.git ~/steam-dl
-pipx install ~/steam-dl        # даст команду steam-dl
+pipx install ~/steam-dl        # provides the steam-dl command
 ```
 
-## Как пользоваться
+## Usage
 
-### GUI (проще всего)
+### GUI
 
 ```bash
-steam-dl gui                 # откроется в браузере
-steam-dl gui --host 0.0.0.0  # управление с телефона в той же сети
+steam-dl gui                 # opens in the browser
+steam-dl gui --host 0.0.0.0  # reachable from a phone on the same network
 ```
 
-Тач-интерфейс: статус системы, поиск игр, загрузка бандла (`.zip`/`.lua`),
-галочка «сухой прогон», лог установки.
+Touch-friendly interface: system status, game search, bundle upload
+(`.zip`/`.lua`), a dry-run toggle, and streamed install logs.
 
-### Терминал
+### Command line
 
 ```bash
-# найти AppID по названию
+# resolve an AppID from a name
 steam-dl search "half-life 2"
 
-# проверить, что система готова
+# check that the system is ready
 steam-dl env
 
-# установить из готового бандла (папка или .zip с lua + манифестами)
+# install from a bundle (folder or .zip with lua + manifests)
 steam-dl install --bundle ~/mygame.zip --goldberg-dir ~/Goldberg
 
-# «сухой прогон» — показать действия, ничего не меняя
+# dry run: print the actions without changing anything
 steam-dl install --bundle ~/mygame.zip --dry-run -v
 ```
 
-Игру можно задать тремя способами: `--bundle` (готовые файлы, проще всего),
-`--spec game.yaml` (см. `examples/`), либо `AppID --depot ID:КЛЮЧ:MANIFEST`.
+A game can be specified three ways: `--bundle` (ready-made files, simplest),
+`--spec game.yaml` (see `examples/`), or `AppID --depot ID:KEY:MANIFEST`.
 
-После установки переключись в **Game Mode** — игра уже в библиотеке.
+After install, switch to **Game Mode** — the game is already in the library.
 
-## Как это работает
+## How it works
 
-Конвейер из пяти шагов, каждый проверяет свой результат перед следующим:
+A five-stage pipeline; each stage validates its result before the next runs:
 
-1. **Манифесты** — кладёт `app_<AppID>.lua` и `.manifest` в префикс SteamTools.
-2. **Загрузка** — запускает Windows-Steam через PortProton (`steam://install`).
-3. **Ожидание** — следит за `appmanifest_<AppID>.acf`, пока игра не скачается.
-4. **Перенос + DRM** — переносит игру в `~/Games`, подменяет `steam_api*.dll`
-   на Goldberg и кладёт `steam_appid.txt`.
-5. **Интеграция** — добавляет ярлык в `shortcuts.vdf` и назначает Proton в
-   `config.vdf`, чтобы игра запускалась в Game Mode.
+1. **Manifests** — write `app_<AppID>.lua` and `.manifest` into the SteamTools
+   prefix.
+2. **Download** — launch Windows Steam through PortProton (`steam://install`).
+3. **Watch** — poll `appmanifest_<AppID>.acf` until the download completes.
+4. **Relocate + DRM** — move the game to `~/Games`, replace `steam_api*.dll`
+   with Goldberg, and write `steam_appid.txt`.
+5. **Integrate** — add a `shortcuts.vdf` entry and map Proton in `config.vdf`
+   so the game launches in Game Mode.
 
-Есть и путь **без Wine**: если известны ключи депотов, бэкенд
-`--backend depotdownloader` качает игру напрямую с CDN Steam, минуя
-PortProton и SteamTools.
+A Wine-free path also exists: when depot keys are known, the
+`--backend depotdownloader` backend pulls the game straight from the Steam CDN,
+skipping PortProton and SteamTools.
 
-## Что нужно принести самому
+## Out of scope
 
-Инструмент **не добывает** ключи и манифесты игр — это данные Steam из твоего
-SteamTools-набора. Ты передаёшь их бандлом (`--bundle`) или в спеке; всё
-остальное автоматизировано. Патч Goldberg работает для лёгкой защиты Steam и
-не обходит Denuvo/CEG.
+Depot keys and manifests are not obtained by the tool — they are Steam data
+supplied by the user via a bundle (`--bundle`) or a spec. Everything else is
+automated. The Goldberg patch covers lightweight Steam DRM and does not bypass
+Denuvo/CEG.
